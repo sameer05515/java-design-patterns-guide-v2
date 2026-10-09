@@ -1,11 +1,44 @@
 <!doctype html>
 <html lang="en">
 <head>
+
+<script>
+  (function () {
+    const storageKey = 'theme';
+    let savedTheme = null;
+    try { savedTheme = localStorage.getItem(storageKey); } catch (_) {}
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', initialTheme === 'dark');
+    document.documentElement.dataset.theme = initialTheme;
+
+    window.__themeToggle = {
+      current: initialTheme,
+      toggle() {
+        this.current = this.current === 'dark' ? 'light' : 'dark';
+        document.documentElement.classList.toggle('dark', this.current === 'dark');
+        document.documentElement.dataset.theme = this.current;
+        try { localStorage.setItem(storageKey, this.current); } catch (_) {}
+        window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: this.current } }));
+      }
+    };
+  })();
+</script>
+<style>
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  html, body { transition: background-color .18s ease, color .18s ease; }
+</style>
+
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Java Design Patterns — Study Guide</title>
   <!-- Tailwind CDN is convenient for learning/demo use. For production, install Tailwind locally. -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+      tailwind.config = { darkMode: 'class' };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
@@ -40,7 +73,19 @@
         </div>
       </div>
     </div>
-  </header>
+  
+<button
+  type="button"
+  id="theme-toggle"
+  class="theme-toggle inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+  aria-label="Switch to dark theme"
+  title="Switch theme"
+>
+  <span id="theme-toggle-icon" aria-hidden="true">🌙</span>
+  <span id="theme-toggle-label">Dark mode</span>
+</button>
+
+</header>
 
   <main class="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[290px_minmax(0,1fr)] lg:px-8">
     <aside class="space-y-4">
@@ -277,5 +322,36 @@
       };
     }
   </script>
+
+<script>
+  (function () {
+    const button = document.getElementById('theme-toggle');
+    if (!button || button.dataset.themeWired === 'true') return;
+    button.dataset.themeWired = 'true';
+    const icon = document.getElementById('theme-toggle-icon');
+    const label = document.getElementById('theme-toggle-label');
+
+    function syncThemeButton() {
+      const dark = document.documentElement.classList.contains('dark');
+      button.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+      button.setAttribute('aria-pressed', String(dark));
+      if (icon) icon.textContent = dark ? '☀️' : '🌙';
+      if (label) label.textContent = dark ? 'Light mode' : 'Dark mode';
+    }
+
+    button.addEventListener('click', function () {
+      if (window.__themeToggle) window.__themeToggle.toggle();
+      else {
+        const dark = !document.documentElement.classList.contains('dark');
+        document.documentElement.classList.toggle('dark', dark);
+        try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (_) {}
+      }
+      syncThemeButton();
+    });
+    window.addEventListener('theme-changed', syncThemeButton);
+    syncThemeButton();
+  })();
+</script>
+
 </body>
 </html>
