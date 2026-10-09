@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SOLID Principles in Java</title>
+<script>
+(()=>{let t='light';try{const s=localStorage.getItem('theme');if(s==='dark'||s==='light')t=s;else if(matchMedia('(prefers-color-scheme: dark)').matches)t='dark'}catch(e){}document.documentElement.classList.toggle('dark',t==='dark')})();
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<style>
+:root{color-scheme:light;--page:#f8fafc;--surface:#fff;--surface2:#f1f5f9;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0}
+html.dark{color-scheme:dark;--page:#0b1220;--surface:#111827;--surface2:#1f2937;--ink:#e5e7eb;--muted:#9ca3af;--line:#374151}
+body{background:var(--page);color:var(--ink);transition:background .18s,color .18s}
+.surface{background:var(--surface);border-color:var(--line)}.surface2{background:var(--surface2)}.muted{color:var(--muted)}
+.theme-toggle{display:inline-flex;gap:.5rem;align-items:center;border:1px solid var(--line);border-radius:.7rem;padding:.55rem .8rem;background:var(--surface);color:var(--ink);font-weight:700}
+.code{background:#0b1220;color:#e5e7eb;border-radius:.8rem;padding:1rem;overflow:auto;font-size:.85rem;line-height:1.6}
+html.dark .text-slate-900,html.dark .text-slate-800,html.dark .text-slate-700{color:#e5e7eb!important}
+html.dark .text-slate-600,html.dark .text-slate-500{color:#cbd5e1!important}
+html.dark .bg-white,html.dark .bg-slate-50{background:var(--surface)!important}
+html.dark .border-slate-200{border-color:var(--line)!important}
+[x-cloak]{display:none!important}pre code.hljs{background:transparent;padding:0}
+</style>
+</head>
+<body class="min-h-screen">
+<header class="bg-slate-950 text-white">
+<div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div><a href="index.html" class="text-sm text-cyan-300 hover:underline">← Back to Design Patterns</a>
+<h1 class="mt-2 text-2xl font-extrabold sm:text-3xl">SOLID Principles in Java</h1>
+<p class="mt-1 text-sm text-slate-300">Five practical principles for maintainable, testable, extensible object-oriented software.</p></div>
+<button id="theme-toggle" class="theme-toggle" type="button"><span id="theme-icon">🌙</span><span id="theme-label">Dark mode</span></button>
+</div>
+<div class="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
+<span class="rounded-full bg-white/10 px-3 py-1">S · Single Responsibility</span><span class="rounded-full bg-white/10 px-3 py-1">O · Open/Closed</span><span class="rounded-full bg-white/10 px-3 py-1">L · Liskov Substitution</span><span class="rounded-full bg-white/10 px-3 py-1">I · Interface Segregation</span><span class="rounded-full bg-white/10 px-3 py-1">D · Dependency Inversion</span>
+</div></div></header>
+<main x-data="solidGuide()" class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+<section class="surface rounded-2xl border p-5 shadow-sm sm:p-7">
+<div class="grid gap-5 md:grid-cols-[1.5fr_1fr]">
+<div><span class="rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold text-cyan-950">Interview quick start</span>
+<h2 class="mt-3 text-xl font-bold">What does SOLID solve?</h2>
+<p class="muted mt-2 leading-7">SOLID helps keep classes focused, extension safe, inheritance behavior predictable, interfaces small, and high-level business logic independent of implementation details. These are guidelines—not rigid laws. Apply them when they reduce coupling and make change easier.</p></div>
+<div class="surface2 rounded-xl p-4"><h3 class="font-bold">Remember the initials</h3><ul class="muted mt-2 space-y-2 text-sm"><li><b class="text-current">S</b> — one reason to change</li><li><b class="text-current">O</b> — extend without editing stable code</li><li><b class="text-current">L</b> — subtypes honor contracts</li><li><b class="text-current">I</b> — depend on small interfaces</li><li><b class="text-current">D</b> — depend on abstractions</li></ul></div>
+</div>
+<div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+<template x-for="p in principles" :key="p.letter"><button @click="active=p.letter;view='explain';showAnswer=false" class="surface rounded-xl border p-4 text-left hover:shadow-md" :class="active===p.letter?'ring-2 ring-cyan-500':''"><span class="text-2xl font-black" x-text="p.letter"></span><span class="mt-1 block font-bold" x-text="p.short"></span><span class="muted mt-1 block text-xs" x-text="p.tagline"></span></button></template>
+</div>
+</section>
+<section class="mt-8 scroll-mt-6">
+<div class="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p class="muted text-sm font-semibold uppercase tracking-wider">Deep dive</p><h2 class="text-2xl font-extrabold">Principle details</h2></div>
+<div class="flex flex-wrap gap-2"><button @click="view='explain'" class="rounded-lg border px-3 py-2 text-sm font-semibold" :class="view==='explain'?'bg-cyan-600 text-white':'surface'">Explanation</button><button @click="view='code'" class="rounded-lg border px-3 py-2 text-sm font-semibold" :class="view==='code'?'bg-cyan-600 text-white':'surface'">Java example</button><button @click="view='interview'" class="rounded-lg border px-3 py-2 text-sm font-semibold" :class="view==='interview'?'bg-cyan-600 text-white':'surface'">Interview notes</button></div></div>
+<template x-for="p in principles.filter(x=>x.letter===active)" :key="p.letter"><article class="surface rounded-2xl border p-5 shadow-sm sm:p-7">
+<div class="flex items-start gap-4"><div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl font-black" :class="p.badge" x-text="p.letter"></div><div><p class="muted text-sm" x-text="p.full"></p><h3 class="text-xl font-extrabold sm:text-2xl" x-text="p.title"></h3><p class="muted mt-2 leading-7" x-text="p.summary"></p></div></div>
+<div x-show="view==='explain'" class="mt-6"><div class="grid gap-4 lg:grid-cols-2"><div class="surface2 rounded-xl p-4"><h4 class="font-bold">Problem</h4><p class="muted mt-2 leading-7" x-text="p.problem"></p></div><div class="surface2 rounded-xl p-4"><h4 class="font-bold">Better approach</h4><p class="muted mt-2 leading-7" x-text="p.solution"></p></div></div><div class="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950"><h4 class="font-bold text-emerald-950 dark:text-emerald-200">Real-world example</h4><p class="mt-2 leading-7 text-emerald-950 dark:text-emerald-100" x-text="p.example"></p></div></div>
+<div x-show="view==='code'" x-cloak class="mt-6"><p class="muted mb-3 text-sm">Illustrative Java example; production code should be split into suitable files and covered by tests.</p><pre class="code"><code class="language-java" x-text="p.code"></code></pre><div class="surface2 mt-4 rounded-xl p-4"><h4 class="font-bold">Why it follows the principle</h4><p class="muted mt-2 leading-7" x-text="p.codeNote"></p></div></div>
+<div x-show="view==='interview'" x-cloak class="mt-6"><div class="surface2 rounded-xl p-4"><h4 class="font-bold">Interview answer</h4><p class="muted mt-2 leading-7" x-text="p.interview"></p></div><h4 class="mt-5 font-bold">Common mistake to avoid</h4><p class="muted mt-2 leading-7" x-text="p.caution"></p><h4 class="mt-5 font-bold">Self-check</h4><p class="muted mt-2 leading-7" x-text="p.question"></p><button @click="showAnswer=!showAnswer" class="mt-3 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-bold text-white" x-text="showAnswer?'Hide answer':'Show answer'"></button><p x-show="showAnswer" x-cloak class="surface mt-3 rounded-lg border p-3 leading-7" x-text="p.answer"></p></div>
+</article></template>
+<div class="mt-4 flex items-center justify-between gap-3"><button @click="move(-1)" class="surface rounded-lg border px-4 py-2 text-sm font-semibold">← Previous</button><span class="muted text-sm" x-text="(principles.findIndex(p=>p.letter===active)+1)+' of '+principles.length"></span><button @click="move(1)" class="surface rounded-lg border px-4 py-2 text-sm font-semibold">Next →</button></div>
+</section>
+<section class="mt-10"><h2 class="text-2xl font-extrabold">SOLID and design patterns</h2><p class="muted mt-2 max-w-3xl leading-7">Design patterns are reusable structures; SOLID helps evaluate whether those structures improve design. Using a pattern does not automatically make code SOLID.</p>
+<div class="mt-4 overflow-x-auto rounded-xl border" style="border-color:var(--line)"><table class="w-full min-w-[640px] text-left text-sm"><thead class="surface2"><tr><th class="p-3">Principle</th><th class="p-3">Related patterns / techniques</th><th class="p-3">Java / Spring example</th></tr></thead><tbody>
+<tr class="border-t" style="border-color:var(--line)"><td class="p-3 font-bold">SRP</td><td class="p-3">Facade, focused services</td><td class="p-3">Separate controller, service, repository</td></tr>
+<tr class="border-t" style="border-color:var(--line)"><td class="p-3 font-bold">OCP</td><td class="p-3">Strategy, Decorator</td><td class="p-3">Add a payment strategy without changing checkout orchestration</td></tr>
+<tr class="border-t" style="border-color:var(--line)"><td class="p-3 font-bold">LSP</td><td class="p-3">Polymorphism, contract tests</td><td class="p-3">Implementations honor interface contracts</td></tr>
+<tr class="border-t" style="border-color:var(--line)"><td class="p-3 font-bold">ISP</td><td class="p-3">Role interfaces, Adapter</td><td class="p-3">Separate read and administration capabilities where useful</td></tr>
+<tr class="border-t" style="border-color:var(--line)"><td class="p-3 font-bold">DIP</td><td class="p-3">Dependency Injection, ports and adapters</td><td class="p-3">Inject a PaymentGateway interface into a service</td></tr>
+</tbody></table></div></section>
+<footer class="muted mt-10 border-t py-6 text-sm" style="border-color:var(--line)"><a href="index.html" class="font-semibold text-cyan-600 hover:underline">← Return to Design Patterns</a></footer>
+</main>
+<script>
+function solidGuide(){return {
+active:'S',view:'explain',showAnswer:false,
+move(n){let i=this.principles.findIndex(p=>p.letter===this.active);this.active=this.principles[(i+n+this.principles.length)%this.principles.length].letter;this.showAnswer=false},
+principles:[
+{letter:'S',short:'Single Responsibility',tagline:'One reason to change',full:'Single Responsibility Principle (SRP)',title:'A class should have one reason to change.',summary:'Keep each class focused on one cohesive responsibility. The reason to change usually maps to a distinct policy, concern, or actor—not necessarily one method.',problem:'A single InvoiceService calculates totals, creates PDFs, sends email, and persists invoices. A change to email formatting risks unrelated calculation logic.',solution:'Separate calculation, document rendering, notification, and persistence into focused collaborators. Keep orchestration together only when that is its responsibility.',example:'OrderService coordinates checkout; OrderRepository persists orders; ReceiptGenerator creates receipts. Each can evolve and be tested independently.',code:`import java.math.BigDecimal;
+import java.util.List;
+
+record Item(BigDecimal price, int quantity) {}
+record Invoice(List<Item> items) {}
+
+class InvoiceCalculator {
+    BigDecimal total(Invoice invoice) {
+        return invoice.items().stream()
+            .map(i -> i.price().multiply(BigDecimal.valueOf(i.quantity())))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+}
+
+interface InvoiceRepository {
+    void save(Invoice invoice);
+}`,codeNote:'Calculation is separate from persistence. The calculator can be unit-tested without a database.',interview:'SRP says a module should have one reason to change. I identify responsibilities by asking which policy or actor drives a change, then separate concerns that evolve independently.',caution:'Do not create a class for every method. Split where responsibilities change independently; avoid needless fragmentation.',question:'A class validates orders, saves them, and sends SMS messages. What might you extract?',answer:'Extract persistence into a repository and SMS delivery into a notification service. Keep validation in an appropriate domain or service component.',badge:'bg-cyan-100 text-cyan-900'},
+{letter:'O',short:'Open/Closed',tagline:'Extend without rewriting stable code',full:'Open/Closed Principle (OCP)',title:'Software entities should be open for extension, but closed for modification.',summary:'Add new behavior through stable abstractions or composition instead of repeatedly editing a central conditional. Existing code can still change to fix bugs or meet genuine requirements.',problem:'Checkout uses if/else branches for CARD, UPI, and WALLET. Every new payment type requires changing the same method.',solution:'Define a PaymentMethod abstraction and provide an implementation per payment type. Resolve the implementation through configuration, a registry, or dependency injection.',example:'Adding UpiPayment should not require rewriting checkout orchestration when the new implementation follows the payment contract.',code:`import java.math.BigDecimal;
+
+interface DiscountPolicy {
+    BigDecimal discountFor(BigDecimal total);
+}
+
+class FestivalDiscount implements DiscountPolicy {
+    public BigDecimal discountFor(BigDecimal total) {
+        return total.multiply(new BigDecimal("0.10"));
+    }
+}
+
+class CheckoutService {
+    private final DiscountPolicy policy;
+    CheckoutService(DiscountPolicy policy) {
+        this.policy = policy;
+    }
+    BigDecimal finalPrice(BigDecimal total) {
+        return total.subtract(policy.discountFor(total));
+    }
+}`,codeNote:'CheckoutService depends on a policy abstraction. A different policy can be supplied without changing the pricing orchestration.',interview:'OCP reduces the need to modify stable, tested code for each new variant. I isolate changing rules behind interfaces, strategies, or well-defined extension points.',caution:'Do not abstract every hypothetical future change. Add extension points when variation is real or reasonably likely.',question:'Which pattern commonly varies an algorithm without changing its caller?',answer:'Strategy: the caller depends on an interface and delegates the algorithm to a selected implementation.',badge:'bg-violet-100 text-violet-900'},
+{letter:'L',short:'Liskov Substitution',tagline:'Subtypes honor contracts',full:'Liskov Substitution Principle (LSP)',title:'A subtype must be usable wherever its base type is expected.',summary:'Implementations must preserve the behavioral contract of their abstraction. They should not strengthen preconditions, weaken postconditions, or violate promised invariants.',problem:'ReadOnlyAccount extends Account but throws UnsupportedOperationException from withdraw(). Callers expecting an Account can fail unexpectedly.',solution:'Model capabilities accurately. Use separate interfaces such as BalanceReader and WithdrawableAccount when not every account supports withdrawal.',example:'Every PaymentGateway implementation should honor its documented success/failure contract, input rules, and idempotency expectations.',code:`interface Shape {
+    double area();
+}
+
+final class Circle implements Shape {
+    private final double radius;
+    Circle(double radius) { this.radius = radius; }
+    public double area() { return Math.PI * radius * radius; }
+}
+
+final class Rectangle implements Shape {
+    private final double width, height;
+    Rectangle(double width, double height) {
+        this.width = width;
+        this.height = height;
+    }
+    public double area() { return width * height; }
+}`,codeNote:'Both shapes honor the same area() contract, so callers do not need to know the concrete shape type.',interview:'LSP is behavioral substitutability, not just inheritance syntax. A subtype must honor the base contract, including exceptions, invariants, and side effects.',caution:'Avoid inheritance when the behavioral “is-a” relationship is false. Prefer composition or smaller capability interfaces.',question:'Why can a Square subtype of a mutable Rectangle violate LSP?',answer:'If callers independently change width and height, a Square that forces both to remain equal violates Rectangle expectations.',badge:'bg-amber-100 text-amber-900'},
+{letter:'I',short:'Interface Segregation',tagline:'Small role-focused interfaces',full:'Interface Segregation Principle (ISP)',title:'Clients should not depend on methods they do not use.',summary:'Prefer role-focused interfaces over one large do-everything interface. This reduces coupling and prevents implementations from providing meaningless methods.',problem:'Worker has work(), eat(), and scheduleLeave(). RobotWorker must implement human-only methods that make no sense for a robot.',solution:'Split capabilities into Workable, Eatable, and LeaveSchedulable interfaces. Each type implements only the capabilities it supports.',example:'Separate report reading from report administration when clients only need read access.',code:`interface Workable {
+    void work();
+}
+interface Eatable {
+    void eat();
+}
+
+final class HumanWorker implements Workable, Eatable {
+    public void work() { /* perform work */ }
+    public void eat()  { /* take a meal */ }
+}
+
+final class RobotWorker implements Workable {
+    public void work() { /* automated work */ }
+}`,codeNote:'RobotWorker implements only the capability it needs; it does not fake an eat() method.',interview:'ISP means clients should depend only on methods relevant to their role. Split large interfaces along cohesive capabilities without creating unnecessary interfaces.',caution:'Too many narrow interfaces can fragment a simple design. Group methods that naturally change together.',question:'What signals that an interface may violate ISP?',answer:'Implementations leave methods empty, throw UnsupportedOperationException, or depend on methods irrelevant to their use case.',badge:'bg-emerald-100 text-emerald-900'},
+{letter:'D',short:'Dependency Inversion',tagline:'Depend on abstractions',full:'Dependency Inversion Principle (DIP)',title:'High-level policy should not depend directly on low-level details.',summary:'High-level and low-level modules should depend on abstractions. Details implement those abstractions, and dependency injection can provide concrete objects.',problem:'OrderService directly constructs MySqlOrderRepository. Changing databases or testing the service requires modifying business orchestration.',solution:'Define an OrderRepository interface at the boundary and inject its implementation. Keep business policy independent of database or transport details.',example:'A Spring Boot service injects PaymentGateway; production uses a provider adapter while tests use a fake implementation.',code:`import java.math.BigDecimal;
+
+interface PaymentGateway {
+    PaymentResult charge(BigDecimal amount);
+}
+record PaymentResult(boolean success) {}
+
+class CheckoutService {
+    private final PaymentGateway gateway;
+    CheckoutService(PaymentGateway gateway) {
+        this.gateway = gateway;
+    }
+    PaymentResult checkout(BigDecimal amount) {
+        return gateway.charge(amount);
+    }
+}`,codeNote:'CheckoutService depends on an abstraction rather than constructing a provider SDK client. Constructor injection makes the dependency explicit and replaceable in tests.',interview:'DIP is a principle about source-code dependency direction. Dependency Injection supplies dependencies from outside; DI helps implement DIP but does not guarantee good abstractions.',caution:'An interface that merely mirrors one concrete class without creating a useful boundary can add ceremony without reducing coupling.',question:'How is Dependency Inversion different from Dependency Injection?',answer:'Dependency Inversion is the principle of depending on abstractions; Dependency Injection is a technique for supplying dependencies externally.',badge:'bg-rose-100 text-rose-900'}
+]}}
+
+(()=>{const b=document.getElementById('theme-toggle'),i=document.getElementById('theme-icon'),l=document.getElementById('theme-label');function sync(){const d=document.documentElement.classList.contains('dark');b.setAttribute('aria-pressed',String(d));b.setAttribute('aria-label',d?'Switch to light theme':'Switch to dark theme');i.textContent=d?'☀️':'🌙';l.textContent=d?'Light mode':'Dark mode'}b.addEventListener('click',()=>{const d=!document.documentElement.classList.contains('dark');document.documentElement.classList.toggle('dark',d);try{localStorage.setItem('theme',d?'dark':'light')}catch(e){}sync()});sync();document.addEventListener('click',e=>{if(e.target.closest('button')&&document.querySelector('button[\\@click*="view=\'code\'"]')){} });const obs=new MutationObserver(()=>{document.querySelectorAll('pre code:not(.hljs)').forEach(x=>{if(window.hljs)hljs.highlightElement(x)})});obs.observe(document.body,{subtree:true,childList:true})})();
+</script>
+</body></html>
