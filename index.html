@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Java Design Patterns — Study Guide</title>
+  <!-- Tailwind CDN is convenient for learning/demo use. For production, install Tailwind locally. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/java.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    html { scroll-behavior: smooth; }
+    .prose-lite h2 { font-size: 1.15rem; font-weight: 700; margin: 1.2rem 0 .5rem; }
+    .prose-lite h3 { font-size: 1rem; font-weight: 700; margin: 1rem 0 .4rem; }
+    .prose-lite p { margin: .65rem 0; line-height: 1.7; }
+    .prose-lite ul { list-style: disc; padding-left: 1.4rem; margin: .65rem 0; }
+    .prose-lite li { margin: .25rem 0; }
+    .prose-lite code:not(pre code) { background: #e2e8f0; color: #0f172a; border-radius: .3rem; padding: .12rem .3rem; font-size: .9em; }
+    .prose-lite pre { overflow-x: auto; border-radius: .75rem; padding: 1rem; margin: .8rem 0; background: #0d1117; }
+    .prose-lite pre code { font-size: .82rem; line-height: 1.6; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800" x-data="patternApp()" x-init="init()">
+  <header class="bg-slate-950 text-white">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[.25em] text-cyan-300">Java learning workspace</p>
+          <h1 class="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Design Patterns</h1>
+          <p class="mt-3 max-w-2xl text-slate-300">An expanded guide to the 23 Gang of Four patterns, with intent, structure, trade-offs, examples, and interview notes.</p>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3"><div class="text-2xl font-bold">5</div><div class="text-xs text-slate-300">Creational</div></div>
+          <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3"><div class="text-2xl font-bold">7</div><div class="text-xs text-slate-300">Structural</div></div>
+          <div class="rounded-xl border border-white/10 bg-white/5 px-4 py-3"><div class="text-2xl font-bold">11</div><div class="text-xs text-slate-300">Behavioral</div></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[290px_minmax(0,1fr)] lg:px-8">
+    <aside class="space-y-4">
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <label for="search" class="text-sm font-semibold text-slate-700">Search patterns</label>
+        <input id="search" x-model.debounce.150ms="query" type="search" placeholder="e.g. Strategy, object creation..." class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+        <div class="mt-4 flex flex-wrap gap-2">
+          <template x-for="category in categories" :key="category">
+            <button @click="activeCategory = category" :class="activeCategory === category ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="rounded-full px-3 py-1.5 text-xs font-semibold transition" x-text="category"></button>
+          </template>
+        </div>
+        <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
+          <span><span x-text="filteredPatterns.length"></span> patterns</span>
+          <button @click="resetFilters()" class="font-semibold text-cyan-700 hover:text-cyan-900">Reset</button>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+        <div class="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-400">Pattern library</div>
+        <nav class="max-h-[55vh] space-y-1 overflow-y-auto" aria-label="Design patterns">
+          <template x-for="pattern in filteredPatterns" :key="pattern.id">
+            <button @click="selectPattern(pattern.id)" :class="selectedId === pattern.id ? 'bg-cyan-50 text-cyan-950 ring-1 ring-cyan-200' : 'text-slate-700 hover:bg-slate-50'" class="flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition">
+              <span :class="categoryColor(pattern.category)" class="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-black" x-text="pattern.short"></span>
+              <span class="min-w-0">
+                <span class="block text-sm font-semibold" x-text="pattern.name"></span>
+                <span class="mt-0.5 block text-xs text-slate-500" x-text="pattern.category"></span>
+              </span>
+            </button>
+          </template>
+          <div x-show="filteredPatterns.length === 0" class="px-3 py-8 text-center text-sm text-slate-500">No patterns match your search.</div>
+        </nav>
+      </div>
+    </aside>
+
+    <section class="min-w-0">
+      <template x-if="selectedPattern">
+        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="border-b border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 sm:p-8">
+            <div class="flex flex-wrap items-center gap-2">
+              <span :class="categoryBadge(selectedPattern.category)" class="rounded-full px-3 py-1 text-xs font-bold" x-text="selectedPattern.category"></span>
+              <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600" x-text="selectedPattern.id + ' / 23 GoF patterns'"></span>
+            </div>
+            <div class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 class="text-3xl font-black tracking-tight text-slate-950" x-text="selectedPattern.name"></h2>
+                <p class="mt-2 max-w-3xl text-base leading-7 text-slate-600" x-text="selectedPattern.summary"></p>
+              </div>
+              <button @click="copyExample()" class="shrink-0 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50" x-text="copyLabel"></button>
+            </div>
+          </div>
+
+          <div class="grid gap-6 p-5 sm:p-8 xl:grid-cols-[minmax(0,1fr)_250px]">
+            <div class="min-w-0 space-y-7">
+              <section>
+                <h3 class="text-lg font-bold text-slate-950">The idea</h3>
+                <div class="prose-lite mt-2 text-sm text-slate-700" x-html="renderMarkdown(selectedPattern.explanation)"></div>
+              </section>
+              <section class="grid gap-4 md:grid-cols-2">
+                <div class="rounded-xl border border-slate-200 p-4">
+                  <h3 class="text-base font-bold text-slate-950">Intent</h3>
+                  <p class="mt-2 text-sm leading-6 text-slate-700" x-text="selectedPattern.intent"></p>
+                </div>
+                <div class="rounded-xl border border-slate-200 p-4">
+                  <h3 class="text-base font-bold text-slate-950">Problem it solves</h3>
+                  <p class="mt-2 text-sm leading-6 text-slate-700" x-text="selectedPattern.problem"></p>
+                </div>
+              </section>
+              <section>
+                <h3 class="text-lg font-bold text-slate-950">Pattern structure</h3>
+                <ol class="mt-3 space-y-2">
+                  <template x-for="(item, index) in selectedPattern.structure" :key="item">
+                    <li class="flex gap-3 text-sm leading-6 text-slate-700">
+                      <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold" x-text="index + 1"></span>
+                      <span x-text="item"></span>
+                    </li>
+                  </template>
+                </ol>
+              </section>
+              <section>
+                <h3 class="text-lg font-bold text-slate-950">Real-world scenario</h3>
+                <div class="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm leading-6 text-cyan-950" x-text="selectedPattern.scenario"></div>
+              </section>
+              <section>
+                <h3 class="text-lg font-bold text-slate-950">Benefits and trade-offs</h3>
+                <ul class="mt-3 space-y-2">
+                  <template x-for="item in selectedPattern.tradeoffs" :key="item">
+                    <li class="flex gap-2 text-sm leading-6 text-slate-700"><span class="mt-0.5 text-cyan-700">•</span><span x-text="item"></span></li>
+                  </template>
+                </ul>
+              </section>
+              <section class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                <h3 class="font-bold text-violet-950">Related patterns</h3>
+                <p class="mt-1 text-sm leading-6 text-violet-900" x-text="selectedPattern.relatedPatterns"></p>
+              </section>
+              <section>
+                <h3 class="text-lg font-bold text-slate-950">Self-check questions</h3>
+                <ul class="mt-3 space-y-2">
+                  <template x-for="question in selectedPattern.learningQuestions" :key="question">
+                    <li class="flex gap-2 text-sm leading-6 text-slate-700"><span class="mt-0.5 text-emerald-600">?</span><span x-text="question"></span></li>
+                  </template>
+                </ul>
+              </section>
+              <section>
+                <h3 class="text-lg font-bold text-slate-950">Java example</h3>
+                <p class="mt-1 text-sm text-slate-500">Illustrative, compact code to show the core idea. Add imports and application-specific error handling as needed.</p>
+                <div class="mt-3 overflow-hidden rounded-xl border border-slate-800 bg-[#0d1117]">
+                  <div class="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
+                    <span class="text-xs font-semibold text-slate-300" x-text="selectedPattern.exampleTitle || 'Example.java'"></span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Java</span>
+                  </div>
+                  <pre class="!m-0 !rounded-none !p-4"><code class="language-java" x-ref="codeBlock" x-text="selectedPattern.code"></code></pre>
+                </div>
+              </section>
+              <section>
+                <h3 class="text-lg font-bold text-slate-950">When to use it</h3>
+                <ul class="mt-3 space-y-2">
+                  <template x-for="item in selectedPattern.useCases" :key="item">
+                    <li class="flex gap-2 text-sm leading-6 text-slate-700"><span class="mt-0.5 text-emerald-600">✓</span><span x-text="item"></span></li>
+                  </template>
+                </ul>
+              </section>
+              <section class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <h3 class="font-bold text-amber-950">Interview note</h3>
+                <p class="mt-1 text-sm leading-6 text-amber-900" x-text="selectedPattern.interview"></p>
+              </section>
+            </div>
+
+            <aside class="space-y-4">
+              <div class="rounded-xl border border-slate-200 p-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">At a glance</h3>
+                <div class="mt-3 space-y-3">
+                  <div><div class="text-xs text-slate-500">Category</div><div class="mt-0.5 text-sm font-bold" x-text="selectedPattern.category"></div></div>
+                  <div><div class="text-xs text-slate-500">Main goal</div><div class="mt-0.5 text-sm font-semibold leading-5" x-text="selectedPattern.goal"></div></div>
+                  <div><div class="text-xs text-slate-500">Common Java / Spring connection</div><div class="mt-0.5 text-sm leading-5 text-slate-700" x-text="selectedPattern.spring"></div></div>
+                </div>
+              </div>
+              <div class="rounded-xl bg-slate-950 p-4 text-white">
+                <h3 class="text-sm font-bold">Study tip</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-300">Explain the problem first, then the roles of the classes, and finally why the pattern is better than a simpler alternative.</p>
+              </div>
+              <div class="rounded-xl border border-slate-200 p-4">
+                <h3 class="text-sm font-bold">Navigate</h3>
+                <div class="mt-3 flex gap-2">
+                  <button @click="moveSelection(-1)" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50">← Previous</button>
+                  <button @click="moveSelection(1)" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50">Next →</button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </article>
+      </template>
+      <div class="mt-5 flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:justify-between">
+        <span>Built with HTML · Alpine.js · Tailwind CSS · Marked · highlight.js</span>
+        <span>Learning demo · Java examples</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="./patterns.js"></script>
+  <script>
+    function patternApp() {
+      return {
+        patterns: window.DESIGN_PATTERNS || [],
+        query: '',
+        activeCategory: 'All',
+        selectedId: 'strategy',
+        copyLabel: 'Copy Java example',
+        categories: ['All', 'Creational', 'Structural', 'Behavioral'],
+        get filteredPatterns() {
+          const q = this.query.trim().toLowerCase();
+          return this.patterns.filter(p =>
+            (this.activeCategory === 'All' || p.category === this.activeCategory) &&
+            (!q || [p.name, p.category, p.summary, p.goal, p.explanation, p.spring, p.intent, p.problem, p.scenario, p.relatedPatterns, ...(p.useCases || []), ...(p.structure || []), ...(p.tradeoffs || [])].join(' ').toLowerCase().includes(q))
+          );
+        },
+        get selectedPattern() {
+          return this.patterns.find(p => p.id === this.selectedId) || this.filteredPatterns[0] || this.patterns[0];
+        },
+        init() {
+          if (!this.patterns.some(p => p.id === this.selectedId) && this.patterns.length) this.selectedId = this.patterns[0].id;
+          this.$nextTick(() => this.highlightCode());
+          this.$watch('selectedId', () => this.$nextTick(() => this.highlightCode()));
+        },
+        selectPattern(id) { this.selectedId = id; },
+        resetFilters() { this.query = ''; this.activeCategory = 'All'; },
+        moveSelection(direction) {
+          const list = this.filteredPatterns;
+          if (!list.length) return;
+          let idx = list.findIndex(p => p.id === this.selectedId);
+          if (idx < 0) idx = 0;
+          idx = (idx + direction + list.length) % list.length;
+          this.selectedId = list[idx].id;
+        },
+        categoryColor(category) {
+          return category === 'Creational' ? 'bg-violet-100 text-violet-800' :
+                 category === 'Structural' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800';
+        },
+        categoryBadge(category) {
+          return category === 'Creational' ? 'bg-violet-100 text-violet-800' :
+                 category === 'Structural' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800';
+        },
+        renderMarkdown(source) {
+          if (!window.marked) return source;
+          return window.marked.parse(source || '');
+        },
+        highlightCode() {
+          if (window.hljs) document.querySelectorAll('pre code.language-java').forEach(el => window.hljs.highlightElement(el));
+        },
+        copyExample() {
+          const text = this.selectedPattern ? this.selectedPattern.code : '';
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
+              this.copyLabel = 'Copied!';
+              setTimeout(() => this.copyLabel = 'Copy Java example', 1500);
+            }).catch(() => this.fallbackCopy(text));
+          } else this.fallbackCopy(text);
+        },
+        fallbackCopy(text) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try { document.execCommand('copy'); this.copyLabel = 'Copied!'; }
+          catch (_) { this.copyLabel = 'Copy unavailable'; }
+          area.remove();
+          setTimeout(() => this.copyLabel = 'Copy Java example', 1500);
+        }
+      };
+    }
+  </script>
+</body>
+</html>
