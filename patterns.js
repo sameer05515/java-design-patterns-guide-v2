@@ -885,5 +885,576 @@ window.DESIGN_PATTERNS = [
       "What changes in the design if Null Object is not used?",
       "What is one trade-off of using Null Object?"
     ]
+  },
+  {
+    "id": "ms-api-gateway",
+    "name": "API Gateway",
+    "category": "Microservices",
+    "short": "GW",
+    "summary": "Provide one entry point for clients and route requests to the appropriate backend services.",
+    "explanation": "An API Gateway hides internal service topology from clients. It can route requests, authenticate callers, apply rate limits, transform requests, and aggregate responses. Keep business logic in the services rather than turning the gateway into a monolith.",
+    "intent": "Give clients a stable, controlled entry point to a system composed of many services.",
+    "problem": "Without a gateway, clients must know each service address and may duplicate cross-cutting logic such as authentication, throttling, and routing.",
+    "structure": [
+      "Client sends a request to the gateway.",
+      "Gateway authenticates or applies edge policies as configured.",
+      "Gateway routes to one or more backend services.",
+      "Gateway returns or aggregates the response."
+    ],
+    "problem2": "Clients become coupled to internal service URLs and deployment changes.",
+    "tradeoffs": [
+      "Centralizes routing and edge concerns.",
+      "Can become a bottleneck or single point of failure if not deployed redundantly.",
+      "Avoid putting domain business workflows and excessive orchestration into the gateway."
+    ],
+    "relatedPatterns": "Backend for Frontend (a client-specific gateway), Service Discovery (finds service instances), Circuit Breaker (protects remote calls).",
+    "scenario": "A React app calls /api/orders; the gateway routes to Order Service and applies authentication before forwarding the request.",
+    "useCases": [
+      "Public APIs for mobile and web clients.",
+      "Routing, authentication, rate limiting, and request aggregation."
+    ],
+    "goal": "One client-facing entry point for multiple services.",
+    "spring": "Spring Cloud Gateway is a common implementation option.",
+    "code": "// Illustrative Spring Cloud Gateway route configuration (YAML)\nspring:\n  cloud:\n    gateway:\n      routes:\n        - id: order-service\n          uri: http://order-service:8081\n          predicates:\n            - Path=/api/orders/**\n          filters:\n            - StripPrefix=1",
+    "exampleTitle": "application.yml",
+    "interview": "Explain which responsibilities belong at the edge (routing, auth policy, rate limiting) and which belong inside domain services.",
+    "learningQuestions": [
+      "What problem does API Gateway solve?",
+      "What failure mode or trade-off should you consider with API Gateway?",
+      "How could you implement API Gateway in a Spring Boot system?"
+    ],
+    "caution": "Avoid putting domain business workflows and excessive orchestration into the gateway."
+  },
+  {
+    "id": "ms-service-discovery",
+    "name": "Service Discovery",
+    "category": "Microservices",
+    "short": "SD",
+    "summary": "Allow services to locate healthy instances dynamically instead of relying on fixed host addresses.",
+    "explanation": "In dynamic environments, service instances can be created, removed, or rescheduled. Discovery uses a registry or platform DNS to resolve a logical service name to reachable instances.",
+    "intent": "Decouple callers from the changing network locations of service instances.",
+    "problem": "Hard-coded IP addresses and ports break as services scale or move between hosts.",
+    "structure": [
+      "Service instances register themselves or are registered by the platform.",
+      "A caller resolves a logical service name.",
+      "Discovery or load balancing selects a reachable instance.",
+      "Health checks help avoid unhealthy instances."
+    ],
+    "tradeoffs": [
+      "Supports dynamic scaling and failover.",
+      "Adds registry or platform dependencies if using a dedicated registry.",
+      "Kubernetes DNS often provides discovery without a separate Eureka registry."
+    ],
+    "relatedPatterns": "Load Balancing, API Gateway, Circuit Breaker.",
+    "scenario": "Order Service calls http://payment-service/payments rather than embedding a machine IP address.",
+    "useCases": [
+      "Autoscaled service instances.",
+      "Environments where instance locations change frequently."
+    ],
+    "goal": "Resolve logical service names to healthy instances.",
+    "spring": "Spring Cloud Netflix Eureka is one option; Kubernetes Services and DNS are another.",
+    "code": "// Spring WebClient using a logical service name\n@Bean\nWebClient paymentClient(WebClient.Builder builder) {\n    return builder\n        .baseUrl(\"http://payment-service\")\n        .build();\n}\n\n// In Kubernetes, the Service DNS name resolves to its endpoints.",
+    "exampleTitle": "PaymentClientConfig.java",
+    "interview": "Mention that discovery can be client-side or server-side. Kubernetes Service DNS is frequently enough in Kubernetes deployments.",
+    "learningQuestions": [
+      "What problem does Service Discovery solve?",
+      "What failure mode or trade-off should you consider with Service Discovery?",
+      "How could you implement Service Discovery in a Spring Boot system?"
+    ],
+    "caution": "Kubernetes DNS often provides discovery without a separate Eureka registry."
+  },
+  {
+    "id": "ms-circuit-breaker",
+    "name": "Circuit Breaker",
+    "category": "Microservices",
+    "short": "CB",
+    "summary": "Stop repeatedly calling a dependency that is failing, then allow controlled recovery attempts.",
+    "explanation": "A circuit breaker typically moves among Closed (calls flow), Open (calls fail fast), and Half-Open (a few trial calls are allowed). It protects callers from wasting resources on a dependency that is unlikely to respond successfully.",
+    "intent": "Prevent cascading failures when a remote dependency becomes unhealthy.",
+    "problem": "Repeated slow or failed calls can exhaust request threads, connections, and memory across multiple services.",
+    "structure": [
+      "Closed: record failures and allow calls.",
+      "When a threshold is reached, open the circuit.",
+      "Open: fail fast or use a fallback.",
+      "After a wait period, Half-Open allows limited trial calls."
+    ],
+    "tradeoffs": [
+      "Improves resilience and limits resource waste.",
+      "Thresholds that are too sensitive can interrupt healthy traffic.",
+      "Fallbacks must be meaningful; do not silently fabricate success."
+    ],
+    "relatedPatterns": "Retry, Timeout, Bulkhead, Fallback.",
+    "scenario": "Order Service temporarily stops calling an unhealthy Shipping Service and returns an order status that can be checked later.",
+    "useCases": [
+      "Remote HTTP calls.",
+      "Database or third-party API dependencies with transient outages."
+    ],
+    "goal": "Fail fast and limit cascading failures.",
+    "spring": "Resilience4j integrates with Spring Boot and supports circuit breakers, retries, rate limiters, and bulkheads.",
+    "code": "// Resilience4j annotation example\n@CircuitBreaker(name = \"shippingService\", fallbackMethod = \"shippingFallback\")\npublic ShippingStatus getShippingStatus(String orderId) {\n    return shippingClient.getStatus(orderId);\n}\n\npublic ShippingStatus shippingFallback(String orderId, Throwable ex) {\n    return ShippingStatus.unknown();\n}",
+    "exampleTitle": "ShippingService.java",
+    "interview": "A circuit breaker is not the same as a retry. Retry attempts another call; a circuit breaker stops calls when failure levels are high.",
+    "learningQuestions": [
+      "What problem does Circuit Breaker solve?",
+      "What failure mode or trade-off should you consider with Circuit Breaker?",
+      "How could you implement Circuit Breaker in a Spring Boot system?"
+    ],
+    "caution": "Fallbacks must be meaningful; do not silently fabricate success."
+  },
+  {
+    "id": "ms-saga",
+    "name": "Saga Pattern",
+    "category": "Microservices",
+    "short": "SA",
+    "summary": "Coordinate a business transaction across services using a sequence of local transactions and compensating actions.",
+    "explanation": "A Saga avoids one distributed ACID transaction spanning independent service databases. Each step commits locally and triggers the next step. If a later step fails, compensating actions attempt to semantically undo earlier work.",
+    "intent": "Maintain business consistency across multiple services without a global database transaction.",
+    "problem": "A single business operation may update Order, Payment, and Inventory databases that cannot share a normal local transaction.",
+    "structure": [
+      "Execute local transaction A and publish/trigger the next step.",
+      "Execute local transaction B, then subsequent steps.",
+      "On failure, run compensating actions in reverse business order where appropriate.",
+      "Track saga state and make steps idempotent."
+    ],
+    "tradeoffs": [
+      "Supports independent databases and long-running workflows.",
+      "Compensation is not always a perfect rollback (for example, a refund is a new transaction).",
+      "Requires idempotency, observability, timeouts, and recovery handling."
+    ],
+    "relatedPatterns": "Transactional Outbox, Event-Driven Architecture, Process Manager, Retry.",
+    "scenario": "Create order → reserve inventory → charge payment. If payment fails, release the inventory reservation and mark the order failed.",
+    "useCases": [
+      "Order fulfillment.",
+      "Travel booking, payment workflows, and other multi-service business processes."
+    ],
+    "goal": "Coordinate distributed business transactions with local commits and compensation.",
+    "spring": "Can be implemented with choreography via Kafka events or orchestration with a dedicated saga/process manager.",
+    "code": "// Simplified saga orchestration pseudocode\ntry {\n    orderService.create(orderId);\n    inventoryService.reserve(orderId);\n    paymentService.charge(orderId);\n    orderService.confirm(orderId);\n} catch (RuntimeException failure) {\n    paymentService.refundIfCharged(orderId); // idempotent\n    inventoryService.releaseIfReserved(orderId);\n    orderService.markFailed(orderId);\n    throw failure;\n}",
+    "exampleTitle": "OrderSaga.java (illustrative)",
+    "interview": "Differentiate choreography (services react to events) from orchestration (a coordinator directs the workflow). Compensation is a business action, not necessarily a database rollback.",
+    "learningQuestions": [
+      "What problem does Saga Pattern solve?",
+      "What failure mode or trade-off should you consider with Saga Pattern?",
+      "How could you implement Saga Pattern in a Spring Boot system?"
+    ],
+    "caution": "Requires idempotency, observability, timeouts, and recovery handling."
+  },
+  {
+    "id": "ms-cqrs",
+    "name": "CQRS",
+    "category": "Microservices",
+    "short": "CQ",
+    "summary": "Separate the model used to change data from the model used to query data.",
+    "explanation": "Command Query Responsibility Segregation uses different paths or models for commands (state-changing operations) and queries (read-only operations). Read and write models may be physically separate, but they do not have to be.",
+    "intent": "Optimize complex read and write workloads independently when their needs differ.",
+    "problem": "A single model can become awkward when transactional writes and diverse read views have very different requirements.",
+    "structure": [
+      "Commands express intent to change state and go through validation.",
+      "Write model enforces domain rules and persists changes.",
+      "Events or projections update read models if separate.",
+      "Queries read from models shaped for retrieval."
+    ],
+    "tradeoffs": [
+      "Can simplify specialized read views and scale reads separately.",
+      "Adds projection maintenance and possible eventual consistency.",
+      "Often unnecessary for straightforward CRUD applications."
+    ],
+    "relatedPatterns": "Event Sourcing (often paired, but not required), Materialized View, Saga.",
+    "scenario": "Order commands update normalized order state while a read projection serves a fast customer order-history page.",
+    "useCases": [
+      "Read-heavy systems with complex query needs.",
+      "Systems with clearly different read and write scaling or data models."
+    ],
+    "goal": "Separate write responsibilities from read responsibilities.",
+    "spring": "Can be implemented with separate Spring services, handlers, repositories, and optional asynchronous projections.",
+    "code": "// Command model\npublic record PlaceOrderCommand(String customerId, List<String> itemIds) {}\n\n@Service\nclass PlaceOrderHandler {\n    public void handle(PlaceOrderCommand command) {\n        // Validate domain rules and persist the order.\n    }\n}\n\n// Query model\npublic record OrderSummary(String orderId, String status, double total) {}\n\n@Service\nclass OrderQueryService {\n    public List<OrderSummary> findOrders(String customerId) {\n        // Read from a query-optimized view or repository.\n        return List.of();\n    }\n}",
+    "exampleTitle": "CQRSExample.java",
+    "interview": "CQRS does not require event sourcing or separate databases. Start with logical separation and add separate read stores only when justified.",
+    "learningQuestions": [
+      "What problem does CQRS solve?",
+      "What failure mode or trade-off should you consider with CQRS?",
+      "How could you implement CQRS in a Spring Boot system?"
+    ],
+    "caution": "Often unnecessary for straightforward CRUD applications."
+  },
+  {
+    "id": "ms-event-sourcing",
+    "name": "Event Sourcing",
+    "category": "Microservices",
+    "short": "ES",
+    "summary": "Store state changes as an append-only sequence of domain events and derive current state by replaying them.",
+    "explanation": "Instead of persisting only the latest state, the system records events such as OrderPlaced, PaymentCaptured, and OrderShipped. Current state can be rebuilt by applying events in order, and projections can support queries.",
+    "intent": "Preserve the history of meaningful state changes as the source of truth.",
+    "problem": "A normal update-in-place table may not retain enough history to explain how an entity reached its current state.",
+    "structure": [
+      "Command is validated against current aggregate state.",
+      "A domain event is appended to the event store.",
+      "Aggregate state is reconstructed by replay or snapshots.",
+      "Projections consume events to build query views."
+    ],
+    "tradeoffs": [
+      "Provides strong audit history and replay capability.",
+      "Requires event versioning, projection rebuilds, snapshots, and operational expertise.",
+      "Events are durable facts; changing old events usually requires explicit migration strategies."
+    ],
+    "relatedPatterns": "CQRS, Transactional Outbox, Saga.",
+    "scenario": "An account balance is derived from AccountOpened, MoneyDeposited, and MoneyWithdrawn events.",
+    "useCases": [
+      "Auditable domains.",
+      "Systems needing temporal history or rebuilding multiple read projections."
+    ],
+    "goal": "Make the event history the source of truth.",
+    "spring": "Often implemented with event-store technology or carefully designed append-only storage and event handlers.",
+    "code": "// Illustrative domain events\nsealed interface OrderEvent permits OrderPlaced, OrderPaid {}\nrecord OrderPlaced(String orderId, double total) implements OrderEvent {}\nrecord OrderPaid(String orderId, String paymentId) implements OrderEvent {}\n\n// Current state is derived by applying stored events in sequence.\n// Production systems also need event schema/version management.",
+    "exampleTitle": "OrderEvents.java",
+    "interview": "Event sourcing is not just logging. Events are the authoritative state history. CQRS and event sourcing can be used independently.",
+    "learningQuestions": [
+      "What problem does Event Sourcing solve?",
+      "What failure mode or trade-off should you consider with Event Sourcing?",
+      "How could you implement Event Sourcing in a Spring Boot system?"
+    ],
+    "caution": "Events are durable facts; changing old events usually requires explicit migration strategies."
+  },
+  {
+    "id": "ms-bulkhead",
+    "name": "Bulkhead",
+    "category": "Microservices",
+    "short": "BH",
+    "summary": "Isolate resource pools so a failing dependency or workload cannot consume all resources.",
+    "explanation": "The pattern takes its name from ship compartments. Separate thread pools, connection pools, semaphores, or concurrency limits isolate failures and slow workloads.",
+    "intent": "Limit the blast radius of a failure by partitioning resources.",
+    "problem": "If every outbound call shares one resource pool, a slow dependency can exhaust it and block unrelated requests.",
+    "structure": [
+      "Identify independent dependencies or workload classes.",
+      "Allocate separate concurrency or resource limits.",
+      "Reject or queue excess work according to policy.",
+      "Monitor saturation and tune capacity."
+    ],
+    "tradeoffs": [
+      "Improves isolation and predictable degradation.",
+      "Consumes more baseline resources and requires capacity planning.",
+      "Too-small limits can reject legitimate traffic."
+    ],
+    "relatedPatterns": "Circuit Breaker, Timeout, Rate Limiter.",
+    "scenario": "Payment calls and recommendation calls use separate concurrency limits so a slow recommendation service does not starve checkout.",
+    "useCases": [
+      "Services with multiple independent remote dependencies.",
+      "Preventing one slow workload from exhausting all threads or connections."
+    ],
+    "goal": "Contain resource exhaustion to one dependency or workload.",
+    "spring": "Resilience4j Bulkhead offers semaphore and thread-pool bulkhead approaches.",
+    "code": "@Bulkhead(name = \"recommendations\", type = Bulkhead.Type.SEMAPHORE)\npublic List<String> recommendations(String customerId) {\n    return recommendationClient.fetch(customerId);\n}",
+    "exampleTitle": "RecommendationService.java",
+    "interview": "Bulkhead isolates concurrent resource use; a circuit breaker stops calls based on failure behavior. They are complementary.",
+    "learningQuestions": [
+      "What problem does Bulkhead solve?",
+      "What failure mode or trade-off should you consider with Bulkhead?",
+      "How could you implement Bulkhead in a Spring Boot system?"
+    ],
+    "caution": "Too-small limits can reject legitimate traffic."
+  },
+  {
+    "id": "ms-retry",
+    "name": "Retry",
+    "category": "Microservices",
+    "short": "RT",
+    "summary": "Retry a failed operation when the failure is likely to be temporary and retrying is safe.",
+    "explanation": "Retries can recover from brief network errors, throttling, or temporary service unavailability. Use a bounded attempt count, backoff, and jitter, and retry only errors that are plausibly transient.",
+    "intent": "Recover automatically from transient failures.",
+    "problem": "A single temporary failure can fail a request even though the dependency becomes healthy moments later.",
+    "structure": [
+      "Classify retryable versus non-retryable failures.",
+      "Set a maximum attempt count and total deadline.",
+      "Use exponential backoff and jitter where appropriate.",
+      "Ensure operations are idempotent or use idempotency keys."
+    ],
+    "tradeoffs": [
+      "Can improve success rates for transient faults.",
+      "Aggressive retries amplify load and can cause retry storms.",
+      "Never blindly retry non-idempotent payment or creation requests."
+    ],
+    "relatedPatterns": "Circuit Breaker, Timeout, Bulkhead, Idempotency.",
+    "scenario": "Retry a safe GET request after a brief connection reset, with a small bounded retry budget.",
+    "useCases": [
+      "Transient network faults.",
+      "Temporary HTTP 429 or 503 responses when policy and Retry-After permit it."
+    ],
+    "goal": "Recover from transient faults without amplifying an outage.",
+    "spring": "Resilience4j Retry supports configurable attempts, exception filters, and wait durations.",
+    "code": "@Retry(name = \"catalogLookup\")\npublic Product findProduct(String id) {\n    return catalogClient.getProduct(id);\n}",
+    "exampleTitle": "CatalogService.java",
+    "interview": "Retries need timeouts and bounded budgets. Retrying every failure immediately can make outages worse.",
+    "learningQuestions": [
+      "What problem does Retry solve?",
+      "What failure mode or trade-off should you consider with Retry?",
+      "How could you implement Retry in a Spring Boot system?"
+    ],
+    "caution": "Never blindly retry non-idempotent payment or creation requests."
+  },
+  {
+    "id": "ms-timeout",
+    "name": "Timeout",
+    "category": "Microservices",
+    "short": "TO",
+    "summary": "Place an upper bound on how long a caller waits for a remote operation.",
+    "explanation": "A timeout prevents requests from waiting indefinitely for a dependency. Configure connection and response/read timeouts, and propagate an overall deadline across nested calls.",
+    "intent": "Bound latency and release resources when a dependency is slow or unreachable.",
+    "problem": "Without timeouts, blocked calls can occupy threads and connections until the service becomes unhealthy.",
+    "structure": [
+      "Set connection and response/read timeouts on outbound clients.",
+      "Define an end-to-end request deadline.",
+      "Ensure downstream timeouts fit within the remaining deadline.",
+      "Handle timeout failures explicitly."
+    ],
+    "tradeoffs": [
+      "Protects resources and latency budgets.",
+      "Too-short timeouts create false failures; too-long timeouts waste resources.",
+      "A client timeout does not guarantee the server stopped processing the operation."
+    ],
+    "relatedPatterns": "Retry, Circuit Breaker, Bulkhead.",
+    "scenario": "An order request has a 2-second budget; a downstream inventory call receives only the remaining portion of that budget.",
+    "useCases": [
+      "HTTP clients, database calls, and RPC requests.",
+      "Preventing hung dependencies from consuming resources."
+    ],
+    "goal": "Bound waiting time and preserve an end-to-end latency budget.",
+    "spring": "Configure timeouts on the specific HTTP client (RestClient's underlying request factory, WebClient connector, or other client).",
+    "code": "// Illustrative Java HttpClient timeout\nHttpClient client = HttpClient.newBuilder()\n    .connectTimeout(Duration.ofSeconds(1))\n    .build();\n\nHttpRequest request = HttpRequest.newBuilder(uri)\n    .timeout(Duration.ofSeconds(2))\n    .GET()\n    .build();",
+    "exampleTitle": "HttpTimeoutExample.java",
+    "interview": "Timeouts are foundational. A retry policy must fit within the total deadline, not restart an unlimited wait each time.",
+    "learningQuestions": [
+      "What problem does Timeout solve?",
+      "What failure mode or trade-off should you consider with Timeout?",
+      "How could you implement Timeout in a Spring Boot system?"
+    ],
+    "caution": "A client timeout does not guarantee the server stopped processing the operation."
+  },
+  {
+    "id": "ms-outbox",
+    "name": "Transactional Outbox",
+    "category": "Microservices",
+    "short": "OB",
+    "summary": "Persist business data and an event record in the same local database transaction, then publish the event asynchronously.",
+    "explanation": "Writing to a database and publishing to a broker are two separate operations. If the database commit succeeds but publishing fails, downstream services may never hear about the change. The outbox stores the event in the same transaction as the business update; a relay publishes pending records later.",
+    "intent": "Avoid the dual-write inconsistency between a database update and message publication.",
+    "problem": "A service can commit an order and crash before sending OrderCreated to Kafka.",
+    "structure": [
+      "Update business rows and insert an outbox row in one local transaction.",
+      "A polling relay or CDC process reads committed outbox rows.",
+      "Publish events to the broker.",
+      "Mark or track delivery and make consumers idempotent."
+    ],
+    "tradeoffs": [
+      "Makes event publication recoverable after local commit.",
+      "Events may be delivered more than once, so consumers need idempotency.",
+      "Requires cleanup, monitoring, ordering strategy, and relay operations."
+    ],
+    "relatedPatterns": "Saga, Event Sourcing, Idempotent Consumer.",
+    "scenario": "Order Service commits an order and OrderCreated outbox row atomically; a relay publishes the event to Kafka after commit.",
+    "useCases": [
+      "Publishing domain events after database changes.",
+      "Reliable asynchronous integration across service boundaries."
+    ],
+    "goal": "Reliably bridge a local database transaction and message broker.",
+    "spring": "Can be implemented with a relational outbox table and polling relay or CDC tooling such as Debezium.",
+    "code": "// Within ONE database transaction\n@Transactional\npublic void createOrder(Order order) {\n    orderRepository.save(order);\n    outboxRepository.save(new OutboxEvent(\n        UUID.randomUUID().toString(),\n        \"OrderCreated\",\n        serialize(order)\n    ));\n}\n\n// A separate relay publishes pending outbox rows to the broker.",
+    "exampleTitle": "OrderService.java",
+    "interview": "The outbox solves the database-plus-broker dual-write problem; it does not guarantee exactly-once effects in every downstream system.",
+    "learningQuestions": [
+      "What problem does Transactional Outbox solve?",
+      "What failure mode or trade-off should you consider with Transactional Outbox?",
+      "How could you implement Transactional Outbox in a Spring Boot system?"
+    ],
+    "caution": "Requires cleanup, monitoring, ordering strategy, and relay operations."
+  },
+  {
+    "id": "ms-db-per-service",
+    "name": "Database per Service",
+    "category": "Microservices",
+    "short": "DB",
+    "summary": "Give each service ownership of its data and prevent other services from directly depending on its tables.",
+    "explanation": "A service owns its schema and exposes data through APIs or events. The database may be a separate instance or a logically isolated schema, depending on operational needs; the important boundary is ownership and avoiding cross-service table coupling.",
+    "intent": "Allow each service to evolve its data model independently.",
+    "problem": "Shared tables let one service's schema changes break another service and create hidden coupling.",
+    "structure": [
+      "A service owns its tables and migration lifecycle.",
+      "Other services use its API or consume published events.",
+      "Cross-service queries use APIs, projections, or data pipelines rather than direct table joins.",
+      "Cross-service transactions use patterns such as Saga when necessary."
+    ],
+    "tradeoffs": [
+      "Enables independent schema evolution and ownership.",
+      "Makes joins and transactions across services more complex.",
+      "Duplicated read data and eventual consistency may be needed."
+    ],
+    "relatedPatterns": "CQRS, Saga, API Composition, Event-Driven Architecture.",
+    "scenario": "Order Service owns order tables; Payment Service owns payment records; neither directly updates the other's database.",
+    "useCases": [
+      "Teams deploy services independently.",
+      "Data ownership and service boundaries need to be explicit."
+    ],
+    "goal": "Reduce schema coupling and clarify ownership.",
+    "spring": "Use separate repositories and migration ownership per service; separate database servers are an operational choice, not an absolute rule.",
+    "code": "// Order Service owns this repository and its schema\ninterface OrderRepository extends JpaRepository<Order, UUID> {}\n\n// Payment Service should not inject OrderRepository or write order tables.\n// It calls an Order API or consumes an OrderCreated event instead.",
+    "exampleTitle": "ServiceDataOwnership.java",
+    "interview": "Database per service means independent ownership, not necessarily one physical database server per service.",
+    "learningQuestions": [
+      "What problem does Database per Service solve?",
+      "What failure mode or trade-off should you consider with Database per Service?",
+      "How could you implement Database per Service in a Spring Boot system?"
+    ],
+    "caution": "Duplicated read data and eventual consistency may be needed."
+  },
+  {
+    "id": "ms-strangler-fig",
+    "name": "Strangler Fig",
+    "category": "Microservices",
+    "short": "SF",
+    "summary": "Modernize a legacy system incrementally by routing selected functionality to new services over time.",
+    "explanation": "Rather than replacing a large application in one risky release, introduce a routing layer and migrate capability by capability. New functionality is implemented in the new system while remaining traffic continues to use the legacy application.",
+    "intent": "Reduce migration risk by replacing a legacy system in small, reversible steps.",
+    "problem": "A big-bang rewrite can take too long, delay value, and create a risky cutover.",
+    "structure": [
+      "Place a proxy, gateway, or routing facade in front of the legacy application.",
+      "Choose a small capability to migrate.",
+      "Route that capability to the new service and keep remaining paths on legacy.",
+      "Measure behavior, retire migrated code, and repeat."
+    ],
+    "tradeoffs": [
+      "Enables incremental delivery and rollback.",
+      "Requires temporary coexistence, routing, data synchronization, and clear ownership.",
+      "Avoid leaving the migration layer permanent without a plan."
+    ],
+    "relatedPatterns": "API Gateway, Anti-Corruption Layer, Branch by Abstraction.",
+    "scenario": "Move customer-profile endpoints from a monolith to Customer Service while billing and reporting remain in the monolith.",
+    "useCases": [
+      "Legacy modernization.",
+      "Gradually extracting microservices from a monolith."
+    ],
+    "goal": "Replace legacy capabilities incrementally rather than all at once.",
+    "spring": "Can use Spring Cloud Gateway or an edge proxy for routing while the legacy and new services coexist.",
+    "code": "// Illustrative routing rule\nif (request.path().startsWith(\"/api/customers\")) {\n    routeTo(\"customer-service\");\n} else {\n    routeTo(\"legacy-monolith\");\n}",
+    "exampleTitle": "MigrationRouting.java (pseudocode)",
+    "interview": "Strangler Fig is a migration strategy, not simply a service-to-service communication pattern. Plan data ownership and the final removal of legacy routes.",
+    "learningQuestions": [
+      "What problem does Strangler Fig solve?",
+      "What failure mode or trade-off should you consider with Strangler Fig?",
+      "How could you implement Strangler Fig in a Spring Boot system?"
+    ],
+    "caution": "Avoid leaving the migration layer permanent without a plan."
+  },
+  {
+    "id": "ms-rate-limiter",
+    "name": "Rate Limiting",
+    "category": "Microservices",
+    "short": "RL",
+    "summary": "Limit how many requests a client or service can make within a defined interval.",
+    "explanation": "Rate limiting protects capacity and fairness by controlling request volume. Common algorithms include token bucket, leaky bucket, fixed window, and sliding window. Limits may be per user, API key, tenant, or endpoint.",
+    "intent": "Protect services from overload, abuse, and unfair resource consumption.",
+    "problem": "Unbounded traffic or noisy clients can consume capacity and degrade service for everyone.",
+    "structure": [
+      "Identify the key used to group requests.",
+      "Track usage with a chosen algorithm.",
+      "Allow requests within the budget and reject or delay excess requests.",
+      "Return clear rate-limit metadata when appropriate."
+    ],
+    "tradeoffs": [
+      "Protects capacity and improves fairness.",
+      "Distributed counters and clock/window behavior need care.",
+      "Limits should reflect service capacity and user expectations."
+    ],
+    "relatedPatterns": "Bulkhead, API Gateway, Load Shedding.",
+    "scenario": "An API allows each API key 100 requests per minute and returns HTTP 429 when the limit is exceeded.",
+    "useCases": [
+      "Public APIs.",
+      "Tenant fairness and protection against bursts or accidental loops."
+    ],
+    "goal": "Control request rate at a defined boundary.",
+    "spring": "Can be applied at an API gateway or implemented with a library and a shared counter store for distributed limits.",
+    "code": "// Controller-level pseudocode; actual limiting belongs in a filter/gateway/library\nif (!rateLimiter.tryAcquire(apiKey)) {\n    throw new TooManyRequestsException(); // map to HTTP 429\n}\nreturn service.handle(request);",
+    "exampleTitle": "RateLimitExample.java",
+    "interview": "Distinguish rate limiting (requests over time) from bulkheads (concurrent resource isolation) and load shedding (rejecting work under overload).",
+    "learningQuestions": [
+      "What problem does Rate Limiting solve?",
+      "What failure mode or trade-off should you consider with Rate Limiting?",
+      "How could you implement Rate Limiting in a Spring Boot system?"
+    ],
+    "caution": "Limits should reflect service capacity and user expectations."
+  },
+  {
+    "id": "ms-idempotent-consumer",
+    "name": "Idempotent Consumer",
+    "category": "Microservices",
+    "short": "IC",
+    "summary": "Make repeated delivery of the same message safe by detecting duplicates or designing operations to be idempotent.",
+    "explanation": "Message brokers and network clients may redeliver messages. A consumer can record a stable message/event ID in the same transaction as its business effect, so a duplicate delivery does not apply the effect twice.",
+    "intent": "Prevent duplicate message delivery from causing duplicate business effects.",
+    "problem": "A consumer can process a message successfully and crash before acknowledging it, causing the broker to deliver it again.",
+    "structure": [
+      "Every event has a stable unique identifier.",
+      "Consumer checks whether the identifier has already been processed.",
+      "Business update and processed-message record commit atomically.",
+      "A duplicate is acknowledged or ignored safely."
+    ],
+    "tradeoffs": [
+      "Makes at-least-once delivery practical for many workflows.",
+      "Requires durable deduplication storage and retention policy.",
+      "Exactly-once end-to-end effects still require careful design across boundaries."
+    ],
+    "relatedPatterns": "Transactional Outbox, Saga, Retry.",
+    "scenario": "A duplicate PaymentRequested event must not charge a customer twice; use a payment idempotency key and durable processing state.",
+    "useCases": [
+      "Kafka or RabbitMQ consumers.",
+      "Payment, order creation, and other operations where duplicates are costly."
+    ],
+    "goal": "Make retries and redelivery safe.",
+    "spring": "Use event IDs, unique constraints, and transactional updates in message consumers.",
+    "code": "@Transactional\npublic void consume(OrderCreated event) {\n    if (processedEventRepository.existsById(event.eventId())) {\n        return; // duplicate delivery\n    }\n\n    updateProjection(event);\n    processedEventRepository.save(new ProcessedEvent(event.eventId()));\n}",
+    "exampleTitle": "OrderCreatedConsumer.java",
+    "interview": "The processed-event record and business effect must be atomic, or a crash can still create duplicates or lost processing.",
+    "learningQuestions": [
+      "What problem does Idempotent Consumer solve?",
+      "What failure mode or trade-off should you consider with Idempotent Consumer?",
+      "How could you implement Idempotent Consumer in a Spring Boot system?"
+    ],
+    "caution": "Exactly-once end-to-end effects still require careful design across boundaries."
+  },
+  {
+    "id": "ms-anti-corruption-layer",
+    "name": "Anti-Corruption Layer",
+    "category": "Microservices",
+    "short": "ACL",
+    "summary": "Translate an external or legacy model into the domain model used by your service.",
+    "explanation": "An anti-corruption layer protects a service's domain language from being shaped by an external system's terminology, data formats, and quirks. It often contains translators, adapters, and mapping code.",
+    "intent": "Keep an external model from leaking through the boundaries of your domain.",
+    "problem": "Directly spreading legacy field names, status codes, and assumptions throughout a new service creates tight coupling.",
+    "structure": [
+      "Define the internal domain model and language.",
+      "Create a translation boundary for the external API or data.",
+      "Map external requests and responses to internal types.",
+      "Keep integration-specific errors and semantics inside the boundary."
+    ],
+    "tradeoffs": [
+      "Protects domain clarity and eases vendor changes.",
+      "Adds mapping code and another layer to maintain.",
+      "Do not duplicate the entire external system unnecessarily."
+    ],
+    "relatedPatterns": "Adapter, Facade, Strangler Fig.",
+    "scenario": "A new Order Service translates legacy status values like 'P' and 'X' into internal Pending and Cancelled states.",
+    "useCases": [
+      "Integrating legacy systems.",
+      "Working with third-party providers whose domain model differs from yours."
+    ],
+    "goal": "Isolate external models and terminology from internal domain logic.",
+    "spring": "Implement an adapter/integration module that maps external DTOs to internal domain objects.",
+    "code": "record LegacyOrderDto(String id, String statusCode) {}\nrecord Order(String id, OrderStatus status) {}\nenum OrderStatus { PENDING, CANCELLED, COMPLETED }\n\nOrder toDomain(LegacyOrderDto dto) {\n    OrderStatus status = switch (dto.statusCode()) {\n        case \"P\" -> OrderStatus.PENDING;\n        case \"X\" -> OrderStatus.CANCELLED;\n        case \"C\" -> OrderStatus.COMPLETED;\n        default -> throw new IllegalArgumentException(\"Unknown status\");\n    };\n    return new Order(dto.id(), status);\n}",
+    "exampleTitle": "LegacyOrderMapper.java",
+    "interview": "An Adapter solves interface compatibility; an Anti-Corruption Layer is a broader domain boundary that may include several adapters and translators.",
+    "learningQuestions": [
+      "What problem does Anti-Corruption Layer solve?",
+      "What failure mode or trade-off should you consider with Anti-Corruption Layer?",
+      "How could you implement Anti-Corruption Layer in a Spring Boot system?"
+    ],
+    "caution": "Do not duplicate the entire external system unnecessarily."
   }
 ];
